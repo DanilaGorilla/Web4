@@ -1,39 +1,79 @@
 <?php
-session_start(); // Начало сессии для работы с Cookies
-
-// Функция для валидации ФИО
-function validate_fullname($fullname)
-{
-    // Паттерн для проверки ФИО: только буквы, пробелы и дефисы, не более 150 символов
-    $pattern = "/^[a-zA-Zа-яА-ЯёЁ\s-]{1,150}$/u";
-    return preg_match($pattern, $fullname);
+if(!empty($_GET['answer'])) {
+$answer = $_GET["answer"];
 }
 
-$errors = []; // Массив для хранения ошибок
+session_start();
+if(isset($_SESSION['id'])) {
+    header("Location: change.php"); // перенаправление на страницу личного кабинета
+    exit();
+}
 
-// Проверка отправки формы
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Валидация ФИО
-    if (empty($_POST['fullname']) || !validate_fullname($_POST['fullname'])) {
-        $errors['fullname'] = 'Некорректное заполнение поля ФИО. Разрешены только буквы, пробелы и дефисы, не более 150 символов.';
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $login = $_POST["login"];
+    $password = $_POST["password"];
+    
+    // Подключение к базе данных
+    $db = mysqli_connect('localhost','u67380', '7713399', 'u67380');
+    if (!$db) {
+        die('Error connecting to database: ' . mysqli_connect_error());
     }
-
-    // Проверка и валидация остальных полей формы
-
-    // Если есть ошибки, сохраняем их в Cookies
-    if (!empty($errors)) {
-        $_SESSION['form_errors'] = $errors;
-        $_SESSION['form_values'] = $_POST; // Сохраняем введенные значения формы
-        header('Location: form.php'); // Перенаправляем обратно на страницу с формой
-        exit();
-    } else {
-        // Если ошибок нет, сохраняем значения формы в Cookies на один год
-        setcookie('form_values', serialize($_POST), time() + 365 * 24 * 60 * 60, '/');
-    }
-} else {
-    // При первом открытии формы проверяем, есть ли сохраненные значения в Cookies
-    if (!empty($_COOKIE['form_values'])) {
-        $_SESSION['form_values'] = unserialize($_COOKIE['form_values']);
+    mysqli_set_charset($db, 'utf8');
+    
+    //Запрос к базе данных
+    $result = $db->query("SELECT * FROM users WHERE login = '$login'");
+    $row = $result->fetch_assoc();
+    $id = $row['id'];
+    $name = $row['name'];
+    $number = $row['number'];
+    $email = $row['mail'];
+    $date = $row['date'];
+    $about = $row['about'];
+    $pass = $row['pass'];
+    
+    if($password == $pass){
+        setcookie("nameC", $name, time()+5000,"/");
+        setcookie("numberC", $number, time()+5000,"/");
+        setcookie("emailC", $email, time()+5000,"/");
+        setcookie("dateC", $date, time()+5000,"/");
+        setcookie("aboutC", $about, time()+5000,"/");
+        // Использование данных из сессии
+        $_SESSION['id'] = $id;
+        // header("Location:index.php?login=".$login);
+        header("Location:change.php?");
+    }else{
+        $answer = "Неправильный пароль";
+        header("Location:index.php?answer=".$answer);
     }
 }
 ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+    <div class="content">
+        <div class="loginForm">
+            <h1>Авторизируйтесь/Зарегистрируйтесь</h1>
+            <p class="error"><?php 
+            if(!empty($_GET['answer'])) {
+                echo $answer;
+            } ?></p>
+            <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]);?>" method="POST" >
+                <input name="login" type="text" placeholder="Login">
+                <input name="password" type="password" placeholder="Password">
+                <div class="buttons">
+                    <button>Вход</button>
+                </div>
+            </form>
+            <a href="http://u67380.kubsu-dev.ru/Web3/form.php"><button>Я новый пользователь</button></a>
+            <a href="http://u67380.kubsu-dev.ru/Web3/admin.php"><button>Войти как администратор</button></a>
+        </div>
+    </div>
+</body>
+</html>
